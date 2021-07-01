@@ -5,8 +5,7 @@ from keras.datasets import mnist
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten
 from keras.layers import Conv2D, MaxPooling2D, GlobalAveragePooling2D # global dodat
-from keras import backend as K
-
+from keras import backend as K, Model
 
 import numpy as np
 import tensorflow as tf
@@ -22,6 +21,11 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras.applications import EfficientNetB0
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard, ModelCheckpoint
 import io
+
+#---1.7.2021
+from tensorflow.python.framework.ops import disable_eager_execution
+disable_eager_execution()
+#------
 
 #----------------------------
 #Pitanje 1: da li da koristimo sequential
@@ -67,12 +71,25 @@ data_set_labels = np.array(data_set_labels)
 # 3264 slike ukupno,
 print(data_set_images.shape)
 # Shuffling (TODO maybe use kaggle shuffle) TODO MOZDA NE RADI
-np.random.shuffle(data_set_images)
+#np.random.shuffle(data_set_images) izmjeniti u buducnosti
 
 # Image data augmentation here TODO ovde ide i deljenje sa 255
 #datagen_val = ImageDataGenerator(rescale=1./255)
 
+#----------------------------------- dodato 1.7.2021
+datagen = ImageDataGenerator(   #dodati i promijeniti neke parametre!
+    rotation_range=30,
+    width_shift_range=0.1,
+    rescale=1./255,
+    height_shift_range=0.1,
+    zoom_range=0.2,
+    horizontal_flip=True)
 
+datagen.fit(data_set_images)
+#-
+
+#--------------------------
+print(data_set_images.shape)
 # Creating training and testing sets
 train_ratio = 0.70
 validation_ratio = 0.20
@@ -80,4 +97,51 @@ test_ratio = 0.10
 
 x_train, x_test, y_train, y_test = train_test_split(data_set_images, data_set_labels, test_size=1 - train_ratio)
 x_val, x_test, y_val, y_test = train_test_split(x_test, y_test, test_size=test_ratio/(test_ratio + validation_ratio))
+
+#---------- 1.7.2021
+
+y_train_new = []
+for i in y_train:
+    y_train_new.append(labels.index(i))
+y_train = y_train_new
+y_train = tf.keras.utils.to_categorical(y_train)
+
+
+y_test_new = []
+for i in y_test:
+    y_test_new.append(labels.index(i))
+y_test = y_test_new
+y_test = tf.keras.utils.to_categorical(y_test)
+
+y_val_new = []
+for i in y_val:
+    y_val_new.append(labels.index(i))
+y_val = y_val_new
+y_val = tf.keras.utils.to_categorical(y_val)
+
+#----
+
+effnet = EfficientNetB0(weights='imagenet', include_top=False, input_shape=(image_height, image_width, 3))
+
+model = effnet.output
+model = GlobalAveragePooling2D()(model)
+model = Dropout(rate=0.5)(model)
+model = Dense(4, activation='softmax')(model)
+model = Model(inputs=effnet.input, outputs=model)
+
+model.summary()
+
+model.compile(loss='categorical_crossentropy', optimizer='Adam', metrics=['accuracy'])
+
+tensorboard = TensorBoard(log_dir='logs')
+checkpoint = ModelCheckpoint("effnet.h5", monitor="val_accuracy", save_best_only=True, mode="auto", verbose=1)
+reduce_lr = ReduceLROnPlateau(monitor='val_accuracy', factor=0.3, patience=2, min_delta=0.001,
+                              mode='auto', verbose=1)
+
+#history = model.fit_generator(datagen.flow(x_train, y_train, batch_size=batch_size),
+#                              epochs=epochs, validation_data=(x_val, y_val),
+#                              steps_per_epoch=x_train.shape[0] // batch_size, callbacks=[tensorboard, checkpoint, reduce_lr])
+
+model.fit(x_train, y_train, epochs = epochs, batch_size = batch_size)
+
 
