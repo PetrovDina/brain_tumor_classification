@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 import os
-#from sklearn.utils import shuffle #ovo isto? vrv TODO
+from sklearn.utils import shuffle #ovo isto? vrv TODO
 from sklearn.model_selection import train_test_split
 
 from tensorflow.keras.applications import EfficientNetB0
@@ -68,6 +68,7 @@ print(data_set_images.shape)
 
 # Image data augmentation here TODO ovde ide i deljenje sa 255 ILI NE?
 
+data_set_images, data_set_labels = shuffle(data_set_images, data_set_labels, random_state=101)
 #----------------------------------- dodato 1.7.2021
 datagen = ImageDataGenerator(   #dodati i promijeniti neke parametre!
     rotation_range=30,
@@ -84,13 +85,14 @@ datagen.fit(data_set_images)
 print(data_set_images.shape)
 
 # Creating training and testing sets
-train_ratio = 0.70
-validation_ratio = 0.20
-test_ratio = 0.10
+#train_ratio = 0.70
+#validation_ratio = 0.20
+#test_ratio = 0.10
 
-x_train, x_test, y_train, y_test = train_test_split(data_set_images, data_set_labels, test_size=1 - train_ratio)
-x_val, x_test, y_val, y_test = train_test_split(x_test, y_test, test_size=test_ratio/(test_ratio + validation_ratio))
+#x_train, x_test, y_train, y_test = train_test_split(data_set_images, data_set_labels, test_size=1 - train_ratio)
+#x_val, x_test, y_val, y_test = train_test_split(x_test, y_test, test_size=test_ratio/(test_ratio + validation_ratio))
 
+x_train, x_test, y_train, y_test = train_test_split(data_set_images, data_set_labels, test_size=0.1,random_state=101)
 #---------- 1.7.2021
 
 y_train_new = []
@@ -105,11 +107,11 @@ for i in y_test:
 y_test = y_test_new
 y_test = tf.keras.utils.to_categorical(y_test)
 
-y_val_new = []
-for i in y_val:
-    y_val_new.append(labels.index(i))
-y_val = y_val_new
-y_val = tf.keras.utils.to_categorical(y_val)
+#y_val_new = []
+#for i in y_val:
+#    y_val_new.append(labels.index(i))
+#y_val = y_val_new
+#y_val = tf.keras.utils.to_categorical(y_val)
 
 #----
 
@@ -131,10 +133,12 @@ checkpoint = ModelCheckpoint("effnet.h5", monitor="val_accuracy", save_best_only
 reduce_lr = ReduceLROnPlateau(monitor='val_accuracy', factor=0.3, patience=2, min_delta=0.001,
                               mode='auto', verbose=1)
 
-history = model.fit_generator(datagen.flow(x_train, y_train, batch_size=batch_size),
-                             epochs=epochs, validation_data=(x_val, y_val),
-                             steps_per_epoch=x_train.shape[0] // batch_size,
-                             callbacks=[tensorboard, checkpoint, reduce_lr])
+history = model.fit(x_train,y_train,validation_split=0.1, epochs =12, verbose=1, batch_size=32,
+                   callbacks=[tensorboard,checkpoint,reduce_lr]) #TODO: izmjeniti validaciju da bude 0.2
+# history = model.fit_generator(datagen.flow(x_train, y_train, batch_size=batch_size),
+#                              epochs=epochs, validation_data=(x_val, y_val),
+#                              steps_per_epoch=x_train.shape[0] // batch_size,
+#                              callbacks=[tensorboard, checkpoint, reduce_lr])
 
 # model.fit(x_train, y_train, epochs = epochs, batch_size = batch_size) #fir sa stack overflow
 
@@ -148,7 +152,7 @@ plt.plot(history.history["val_loss"],c = "orange")
 plt.title("Loss")
 plt.ylabel("Loss")
 plt.xlabel("Epochs")
-plt.legend(["train", "test"])
+plt.legend(["train", "validation"])
 plt.show()
 
 # Accuracy graph
@@ -157,5 +161,5 @@ plt.plot(history.history["val_accuracy"],c = "orange")
 plt.title("Accuracy")
 plt.ylabel("Accuracy")
 plt.xlabel("Epochs")
-plt.legend(["train", "test"])
+plt.legend(["train", "validation"])
 plt.show()
