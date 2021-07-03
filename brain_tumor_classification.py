@@ -108,7 +108,7 @@ checkpoint = ModelCheckpoint("effnet.h5", monitor="val_accuracy", save_best_only
 reduce_lr = ReduceLROnPlateau(monitor='val_accuracy', factor=0.3, patience=2, min_delta=0.001,
                               mode='auto', verbose=1)
 
-history = model.fit(x_train,y_train,validation_split=0.1, epochs = epochs, verbose=1, batch_size=batch_size,
+history = model.fit(x_train, y_train, validation_split=0.1, epochs = epochs, verbose=1, batch_size=batch_size,
                    callbacks=[tensorboard,checkpoint,reduce_lr])  # TODO: izmjeniti validaciju da bude 0.2
 
 
