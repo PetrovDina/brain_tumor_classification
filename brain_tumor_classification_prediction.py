@@ -19,10 +19,6 @@ labels = ['glioma_tumor', 'no_tumor', 'meningioma_tumor', 'pituitary_tumor']
 # Setting hyper-parameters
 image_height = 224
 image_width = 224
-batch_size = 32
-num_classes = len(labels)
-epochs = 12
-
 
 # Importing images
 data_set_images = []
