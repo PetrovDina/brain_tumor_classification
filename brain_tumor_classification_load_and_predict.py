@@ -1,4 +1,4 @@
-from sklearn.metrics import  classification_report,confusion_matrix
+from sklearn.metrics import  classification_report, confusion_matrix
 from tensorflow import keras
 
 import tensorflow as tf
@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 model = keras.models.load_model('model.h5')
+
 
 dataPath = "./data"
 labels = ['glioma_tumor', 'no_tumor', 'meningioma_tumor', 'pituitary_tumor']
@@ -51,17 +52,6 @@ print(data_set_images.shape)
 # Shuffling data
 data_set_images, data_set_labels = shuffle(data_set_images, data_set_labels, random_state=101)
 
-# Image data augmentation
-datagen = ImageDataGenerator(   # TODO dodati i promijeniti neke parametre!
-    rotation_range=30,
-    width_shift_range=0.1,
-    rescale=1./255,
-    height_shift_range=0.1,
-    zoom_range=0.2,
-    horizontal_flip=True)
-
-datagen.fit(data_set_images)
-
 
 # Creating training and testing sets
 train_ratio = 0.70
@@ -82,12 +72,15 @@ pred = np.argmax(pred, axis=1)
 y_test_new = np.argmax(y_test, axis=1)
 print(classification_report(y_test_new, pred))
 
+score = model.evaluate(x_test, y_test, verbose=0)
+print('Test loss:', score[0])
+print('Test accuracy:', score[1])
 
-#matrica knf
+# Confusion matrix plot
 fig, ax = plt.subplots(1, 1, figsize=(14, 7))
 sns.heatmap(confusion_matrix(y_true=y_test_new, y_pred=pred), ax=ax, xticklabels=labels, yticklabels=labels, annot=True,
            alpha=0.7, linewidths=2)
-fig.text(s='Heatmap of the Confusion Matrix', size=18, fontweight='bold',
+fig.text(s='Confusion Matrix', size=20, fontweight='bold',
              fontname='monospace', y=0.92, x=0.28, alpha=0.8)
 
 plt.show()

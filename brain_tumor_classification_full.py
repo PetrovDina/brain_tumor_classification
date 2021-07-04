@@ -26,7 +26,7 @@ labels = ['glioma_tumor', 'no_tumor', 'meningioma_tumor', 'pituitary_tumor']
 # Hyper-parameters
 image_height = 224
 image_width = 224
-batch_size = 32
+batch_size = 16 # treba 32!!
 num_classes = len(labels)
 epochs = 12
 
@@ -37,7 +37,7 @@ def import_training_images(data_set_images, data_set_labels):
         pathToFolder = os.path.join(dataPath, 'Training', label)
         for file in os.listdir(pathToFolder):
             img = cv2.imread(os.path.join(pathToFolder, file))
-            img = cv2.resize(img, (image_height, image_width))  # resize to 224x224
+            img = cv2.resize(img, (image_height, image_width))
             data_set_images.append(img)
             data_set_labels.append(label)
 
@@ -51,7 +51,7 @@ def import_test_images(data_set_images, data_set_labels):
         pathToFolder = os.path.join(dataPath, 'Testing', label)
         for file in os.listdir(pathToFolder):
             img = cv2.imread(os.path.join(pathToFolder, file))
-            img = cv2.resize(img, (image_height, image_width))  # resize to 224x224
+            img = cv2.resize(img, (image_height, image_width))
             data_set_images.append(img)
             data_set_labels.append(label)
 
@@ -60,26 +60,16 @@ def import_test_images(data_set_images, data_set_labels):
 
 
 def image_data_augmentation():
-    datagen = ImageDataGenerator(  # TODO dodati i promijeniti neke parametre!
-        rotation_range=30,
-        width_shift_range=0.1,
-        rescale=1. / 255,  # izbaciti ovo jer je ukljucena normalizacija u effnet
-        height_shift_range=0.1,
-        zoom_range=0.2,
-        horizontal_flip=True)
-
-    """
-    train_datagen = ImageDataGenerator(
+    datagen = ImageDataGenerator(
         rotation_range=15,
         width_shift_range=0.1,
         height_shift_range=0.1,
+        zoom_range=0.2,
         shear_range=0.1,
         brightness_range=[0.5, 1.5],
         horizontal_flip=True,
-        vertical_flip=True,
-        preprocessing_function=preprocess_input
+        vertical_flip = True,
     )
-    """
 
     return datagen
 
@@ -109,20 +99,20 @@ def create_model():
 def train(model):
 
     # Callbacks
-    tensorboard = TensorBoard(log_dir='logs') # ovo izbaciti vrv TODO
+    tensorboard = TensorBoard(log_dir='logs')
     checkpoint = ModelCheckpoint("model.h5", monitor="val_accuracy", save_best_only=True, mode="auto", verbose=1)
     reduce_lr = ReduceLROnPlateau(monitor='val_accuracy', factor=0.3, patience=2, min_delta=0.001,
                                   mode='auto', verbose=1)
 
     # Training
-    history = model.fit(x_train, y_train, validation_split=0.1, epochs=epochs, verbose=1, batch_size=batch_size,
+    history = model.fit(x_train, y_train, validation_split=0.2, epochs=epochs, verbose=1, batch_size=batch_size,
                         callbacks=[tensorboard, checkpoint, reduce_lr])  # TODO: izmjeniti validaciju da bude 0.2
 
     return history
 
 
 
-def plot_loss_graph():
+def plot_loss_graph(history):
     plt.plot(history.history["loss"], c="purple")
     plt.plot(history.history["val_loss"], c="orange")
     plt.title("Loss")
@@ -132,7 +122,7 @@ def plot_loss_graph():
     plt.show()
 
 
-def plot_accuracy_graph():
+def plot_accuracy_graph(history):
     plt.plot(history.history["accuracy"], c="purple")
     plt.plot(history.history["val_accuracy"], c="orange")
     plt.title("Accuracy")
@@ -152,10 +142,11 @@ def plot_confusion_matrix(y_test_new, prediction):
 
     plt.show()
 
+
 if __name__ == '__main__':
 
-    data_set_images = [] # Images
-    data_set_labels = [] # Image labels
+    data_set_images = []  # Images
+    data_set_labels = []  # Image labels
 
     # Importing training folder images
     data_set_images, data_set_labels = import_training_images(data_set_images, data_set_labels)
@@ -204,6 +195,11 @@ if __name__ == '__main__':
     prediction = np.argmax(prediction, axis=1)
     y_test_new = np.argmax(y_test, axis=1)
     print(classification_report(y_test_new, prediction))
+
+    # Evaluation
+    score = model.evaluate(x_test, y_test, verbose=0)
+    print('Test loss:', score[0])
+    print('Test accuracy:', score[1])
 
     # Confusion matrix
     plot_confusion_matrix(y_test_new, prediction)
